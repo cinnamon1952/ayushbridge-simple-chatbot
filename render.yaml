@@ -4,13 +4,9 @@ services:
     env: python
     plan: free
     buildCommand: pip install -r requirements_simple.txt
-    startCommand: gunicorn --bind 0.0.0.0:$PORT simple_app:app
+    startCommand: gunicorn simple_app:app
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: MODEL_NAME
         value: deepseek/deepseek-r1
-      - key: FLASK_SECRET_KEY
-        generateValue: true
-      - key: FLASK_DEBUG
-        value: False
