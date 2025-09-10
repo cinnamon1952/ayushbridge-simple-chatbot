@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AyushBridge AI Assistant - Simple</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --primary-color: #2c5530;
+            --secondary-color: #4a7c59;
+            --accent-color: #8fbc8f;
+            --light-green: #f0f8f0;
+        }
+
+        body {
+            background: linear-gradient(135deg, var(--light-green) 0%, #ffffff 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            min-height: 100vh;
+        }
+
+        .navbar {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            box-shadow: 0 2px 10px rgba(44, 85, 48, 0.3);
+        }
+
+        .navbar-brand {
+            font-weight: 700;
+            font-size: 1.5rem;
+            color: white !important;
+        }
+
+        .chat-container {
+            max-width: 800px;
+            margin: 2rem auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .chat-header {
+            background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+            color: white;
+            padding: 1.5rem;
+            text-align: center;
+        }
+
+        .chat-messages {
+            height: 500px;
+            overflow-y: auto;
+            padding: 1.5rem;
+            background-color: #fafafa;
+        }
+
+        .message {
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: flex-start;
+        }
+
+        .message.user {
+            flex-direction: row-reverse;
+        }
+
+        .message-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            margin: 0 1rem;
+        }
+
+        .user .message-avatar {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .assistant .message-avatar {
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            color: white;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 1rem 1.5rem;
+            border-radius: 18px;
+            position: relative;
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+        }
+
+        .assistant .message-content {
+            background: white;
+            border: 1px solid #e0e0e0;
+            color: #333;
+        }
+
+        .message-time {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 0.5rem;
+        }
+
+        .chat-input-container {
+            padding: 1.5rem;
+            background: white;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .input-group {
+            position: relative;
+        }
+
+        .form-control {
+            border-radius: 25px;
+            border: 2px solid #e0e0e0;
+            padding: 0.75rem 1.5rem;
+            font-size: 1rem;
+            transition: all 0.3s ease;
+        }
+
+        .form-control:focus {
+            border-color: var(--primary-color);
+            box-shadow: 0 0 0 0.2rem rgba(44, 85, 48, 0.25);
+        }
+
+        .btn-send {
+            position: absolute;
+            right: 5px;
+            top: 50%;
+            transform: translateY(-50%);
+            background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+            border: none;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+
+        .btn-send:hover {
+            transform: translateY(-50%) scale(1.05);
+            box-shadow: 0 4px 15px rgba(44, 85, 48, 0.3);
+        }
+
+        .suggestions-container {
+            padding: 1rem 1.5rem;
+            background: var(--light-green);
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .suggestion-chip {
+            display: inline-block;
+            background: white;
+            border: 1px solid var(--accent-color);
+            color: var(--primary-color);
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            margin: 0.25rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.9rem;
+        }
+
+        .suggestion-chip:hover {
+            background: var(--primary-color);
+            color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(44, 85, 48, 0.2);
+        }
+
+        .loading-indicator {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+            color: var(--secondary-color);
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+            border-radius: 10px;
+            padding: 1rem;
+            margin: 1rem 0;
+        }
+
+        .welcome-message {
+            text-align: center;
+            padding: 2rem;
+            color: var(--secondary-color);
+            font-style: italic;
+        }
+
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-right: 0.5rem;
+            animation: pulse 2s infinite;
+        }
+
+        .status-online {
+            background-color: #28a745;
+        }
+
+        .status-offline {
+            background-color: #dc3545;
+        }
+
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .stats-badge {
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            padding: 0.25rem 0.75rem;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            margin-left: 1rem;
+        }
+
+        @media (max-width: 768px) {
+            .chat-container {
+                margin: 1rem;
+                border-radius: 15px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg">
+        <div class="container">
+            <a class="navbar-brand" href="#">
+                <i class="fas fa-leaf me-2"></i>
+                AyushBridge AI Assistant
+                <span class="stats-badge">Simple Mode</span>
+            </a>
+            <div class="navbar-nav ms-auto">
+                <span class="nav-link text-white">
+                    <span class="status-indicator {% if chatbot_available %}status-online{% else %}status-offline{% endif %}"></span>
+                    {% if chatbot_available %}Online{% else %}Offline{% endif %}
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="chat-container">
+            <!-- Chat Header -->
+            <div class="chat-header">
+                <h2>
+                    <i class="fas fa-robot me-2"></i>
+                    AyushBridge AI Assistant
+                </h2>
+                <p>Your intelligent guide to FHIR R4-compliant terminology services - Lightweight Version</p>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chat-messages">
+                <div class="welcome-message">
+                    <i class="fas fa-hand-wave fa-2x mb-3" style="color: var(--accent-color);"></i>
+                    <h4>Welcome to AyushBridge AI Assistant!</h4>
+                    <p>I'm here to help you understand AyushBridge - the FHIR R4-compliant terminology microservice.</p>
+                    <p>This is the lightweight version that runs entirely on cloud without vector databases!</p>
+                    <p>Ask me anything about installation, configuration, API usage, or features!</p>
+                </div>
+            </div>
+
+            <!-- Loading Indicator -->
+            <div class="loading-indicator" id="loading-indicator">
+                <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                Processing your message...
+            </div>
+
+            <!-- Suggestions -->
+            <div class="suggestions-container" id="suggestions-container" style="display: none;">
+                <small class="text-muted mb-2 d-block">
+                    <i class="fas fa-lightbulb me-1"></i>
+                    Suggested questions:
+                </small>
+                <div id="suggestions-list"></div>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="input-group">
+                    <input 
+                        type="text" 
+                        class="form-control" 
+                        id="message-input" 
+                        placeholder="Ask me anything about AyushBridge..."
+                        onkeypress="handleKeyPress(event)"
+                        {% if not chatbot_available %}disabled{% endif %}
+                    >
+                    <button 
+                        class="btn btn-send" 
+                        onclick="sendMessage()"
+                        {% if not chatbot_available %}disabled{% endif %}
+                    >
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+                {% if not chatbot_available %}
+                <div class="error-message mt-3">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Chatbot is currently unavailable. Please check the configuration and try again.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let messageCount = 0;
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            loadSuggestions();
+        });
+
+        // Handle Enter key press
+        function handleKeyPress(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendMessage();
+            }
+        }
+
+        // Send message to chatbot
+        async function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            
+            if (!message) return;
+
+            // Clear input and show loading
+            input.value = '';
+            showLoading(true);
+            
+            // Add user message to chat
+            addMessage(message, 'user');
+            messageCount++;
+
+            try {
+                const response = await fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        temperature: 0.7
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    addMessage(data.answer, 'assistant', data);
+                } else {
+                    addMessage(`Error: ${data.error}`, 'assistant', null, true);
+                }
+            } catch (error) {
+                addMessage(`Network error: ${error.message}`, 'assistant', null, true);
+            } finally {
+                showLoading(false);
+            }
+        }
+
+        // Add message to chat
+        function addMessage(content, sender, metadata = null, isError = false) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${sender}`;
+            
+            const avatar = document.createElement('div');
+            avatar.className = 'message-avatar';
+            avatar.innerHTML = sender === 'user' ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+            
+            const messageContent = document.createElement('div');
+            messageContent.className = 'message-content';
+            
+            if (isError) {
+                messageContent.style.background = '#f8d7da';
+                messageContent.style.color = '#721c24';
+                messageContent.style.border = '1px solid #f5c6cb';
+            }
+            
+            let html = `<div>${content}</div>`;
+            
+            // Add metadata
+            if (metadata) {
+                html += `<div class="message-time">
+                    <i class="fas fa-clock me-1"></i>
+                    ${metadata.response_time?.toFixed(2)}s | 
+                    Context: ${metadata.context_length || 0} chars
+                </div>`;
+            } else {
+                html += `<div class="message-time">
+                    <i class="fas fa-clock me-1"></i>
+                    ${new Date().toLocaleTimeString()}
+                </div>`;
+            }
+            
+            messageContent.innerHTML = html;
+            
+            messageDiv.appendChild(avatar);
+            messageDiv.appendChild(messageContent);
+            
+            messagesContainer.appendChild(messageDiv);
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+            
+            // Hide welcome message
+            const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+            if (welcomeMessage) {
+                welcomeMessage.style.display = 'none';
+            }
+        }
+
+        // Show/hide loading indicator
+        function showLoading(show) {
+            const loading = document.getElementById('loading-indicator');
+            loading.style.display = show ? 'block' : 'none';
+        }
+
+        // Load suggestions
+        async function loadSuggestions() {
+            try {
+                const response = await fetch('/api/suggestions');
+                const data = await response.json();
+                
+                if (data.success && data.suggestions) {
+                    const suggestionsContainer = document.getElementById('suggestions-container');
+                    const suggestionsList = document.getElementById('suggestions-list');
+                    
+                    suggestionsList.innerHTML = '';
+                    
+                    // Show first 6 suggestions
+                    data.suggestions.slice(0, 6).forEach(suggestion => {
+                        const chip = document.createElement('span');
+                        chip.className = 'suggestion-chip';
+                        chip.textContent = suggestion;
+                        chip.onclick = () => {
+                            document.getElementById('message-input').value = suggestion;
+                            sendMessage();
+                        };
+                        suggestionsList.appendChild(chip);
+                    });
+                    
+                    suggestionsContainer.style.display = 'block';
+                }
+            } catch (error) {
+                console.error('Error loading suggestions:', error);
+            }
+        }
+
+        // Reset conversation
+        async function resetConversation() {
+            try {
+                const response = await fetch('/api/reset', { method: 'POST' });
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Clear chat messages
+                    const messagesContainer = document.getElementById('chat-messages');
+                    messagesContainer.innerHTML = `
+                        <div class="welcome-message">
+                            <i class="fas fa-hand-wave fa-2x mb-3" style="color: var(--accent-color);"></i>
+                            <h4>Welcome back to AyushBridge AI Assistant!</h4>
+                            <p>Conversation has been reset. How can I help you today?</p>
+                        </div>
+                    `;
+                    
+                    messageCount = 0;
+                    addMessage('Conversation has been reset successfully!', 'assistant');
+                }
+            } catch (error) {
+                addMessage('Error resetting conversation.', 'assistant', null, true);
+            }
+        }
+
+        // Add reset button functionality
+        document.addEventListener('DOMContentLoaded', function() {
+            const navbar = document.querySelector('.navbar .container');
+            const resetBtn = document.createElement('button');
+            resetBtn.className = 'btn btn-outline-light btn-sm me-2';
+            resetBtn.innerHTML = '<i class="fas fa-refresh me-1"></i>Reset';
+            resetBtn.onclick = resetConversation;
+            navbar.querySelector('.navbar-nav').prepend(resetBtn);
+        });
+    </script>
+</body>
+</html>

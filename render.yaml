@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: ayushbridge-chatbot
+    env: python
+    plan: free
+    buildCommand: pip install -r requirements_simple.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT simple_app:app
+    envVars:
+      - key: GROQ_API_KEY
+        sync: false
+      - key: USE_GROQ
+        value: true
+      - key: GROQ_BASE_URL
+        value: https://api.groq.com/openai/v1
+      - key: MODEL_NAME
+        value: llama-3.1-8b-instant
+      - key: FLASK_SECRET_KEY
+        generateValue: true
+      - key: FLASK_DEBUG
+        value: False
