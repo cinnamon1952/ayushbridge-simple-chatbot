@@ -3,10 +3,12 @@ services:
     name: ayushbridge-chatbot
     env: python
     plan: free
-    buildCommand: pip install -r requirements_simple.txt
+    buildCommand: ./build.sh
     startCommand: gunicorn simple_app:app
     envVars:
       - key: OPENROUTER_API_KEY
         sync: false
       - key: MODEL_NAME
         value: deepseek/deepseek-r1
+      - key: DISABLE_POETRY
+        value: "1"
