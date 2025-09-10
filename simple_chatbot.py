@@ -14,12 +14,12 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()  # Will load .env file or environment variables
 
-logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
 
 
 class SimpleOpenRouterClient:
-    def __init__(self, api_key: str, model: str = "deepseek/deepseek-r1"):
+    def __init__(self, api_key: str, model: str = "deepseek/deepseek-chat-v3.1:free"):
         self.api_key = api_key
         self.model = model
         self.base_url = "https://openrouter.ai/api/v1"
@@ -48,6 +48,18 @@ class SimpleOpenRouterClient:
             )
             response.raise_for_status()
             data = response.json()
+            
+            # Debug: log the response structure
+            logger.debug(f"OpenRouter response: {data}")
+            
+            if 'choices' not in data:
+                logger.error(f"No 'choices' in response: {data}")
+                return f"I apologize, but the API response format was unexpected. Please try again."
+            
+            if not data['choices'] or 'message' not in data['choices'][0]:
+                logger.error(f"Invalid choices structure: {data['choices']}")
+                return f"I apologize, but the API response was malformed. Please try again."
+                
             return data['choices'][0]['message']['content']
         except Exception as e:
             logger.error(f"OpenRouter API error: {str(e)}")
@@ -82,7 +94,7 @@ class SimpleAyushBridgeChatbot:
         content = re.sub(r'\n\s*\n\s*\n', '\n\n', content)  # Remove excessive newlines
         return content.strip()
     
-    def _find_relevant_sections(self, query: str, max_chars: int = 3000) -> str:
+    def _find_relevant_sections(self, query: str, max_chars: int = 4000) -> str:
         """Find relevant sections from README based on query keywords."""
         query_lower = query.lower()
         query_keywords = re.findall(r'\b\w+\b', query_lower)
@@ -91,12 +103,26 @@ class SimpleAyushBridgeChatbot:
         sections = re.split(r'\n(?=#{1,3}\s)', self.readme_content)
         scored_sections = []
         
-        for section in sections:
+        # For "what is" type questions, prioritize introduction sections
+        is_intro_question = any(word in query_lower for word in ['what is', 'what does', 'explain', 'describe', 'overview'])
+        
+        # Always include the first few sections for intro questions
+        priority_sections = []
+        if is_intro_question:
+            for i, section in enumerate(sections[:6]):  # First 6 sections usually contain the overview
+                if len(section.strip()) > 50:
+                    priority_sections.append((1000 + i, section))  # High priority
+        
+        for i, section in enumerate(sections):
             if len(section.strip()) < 50:  # Skip very short sections
                 continue
                 
             section_lower = section.lower()
             score = 0
+            
+            # Boost score for introduction/overview sections
+            if i < 3 or any(word in section_lower for word in ['ayushbridge', 'overview', 'problem statement', 'solution']):
+                score += 100
             
             # Score based on keyword matches
             for keyword in query_keywords:
@@ -107,17 +133,29 @@ class SimpleAyushBridgeChatbot:
             if query_lower in section_lower:
                 score += 50
             
-            if score > 0:
-                scored_sections.append((score, section))
+            # Special boost for "what is" type questions
+            if any(word in query_lower for word in ['what is', 'what does', 'explain', 'describe']):
+                if any(word in section_lower for word in ['ayushbridge', 'problem statement', 'solution overview', 'core capabilities']):
+                    score += 200
+            
+            scored_sections.append((score, section))
+        
+        # Add priority sections for intro questions
+        if priority_sections:
+            scored_sections.extend(priority_sections)
         
         # Sort by score and combine top sections
         scored_sections.sort(reverse=True, key=lambda x: x[0])
         
         relevant_content = ""
-        for score, section in scored_sections[:5]:  # Top 5 sections
+        sections_added = 0
+        for score, section in scored_sections:
+            if sections_added >= 6:  # Limit to top 6 sections
+                break
             if len(relevant_content) + len(section) > max_chars:
                 break
             relevant_content += f"\n\n=== SECTION ===\n{section}"
+            sections_added += 1
         
         return relevant_content[:max_chars] if relevant_content else self.readme_content[:max_chars]
     
@@ -136,17 +174,28 @@ class SimpleAyushBridgeChatbot:
             relevant_context = self._find_relevant_sections(user_message)
             
             # Create system message
-            system_message = """You are AyushBridge AI Assistant. You MUST ONLY answer questions using the information provided in the AyushBridge documentation below. 
+            system_message = """You are AyushBridge AI Assistant, the expert AI assistant for AyushBridge - a FHIR R4-compliant terminology microservice for traditional Indian medicine.
 
-STRICT RULES:
-1. ONLY use information from the provided AyushBridge documentation
-2. If information is not in the documentation, say "I don't have that information in the AyushBridge documentation"
-3. Do NOT use external knowledge or make assumptions
-4. Quote directly from the documentation when possible
-5. Be helpful and detailed when the information IS available in the docs
-6. Always specify that your answer is based on the AyushBridge documentation
+ABOUT AYUSHBRIDGE:
+AyushBridge bridges NAMASTE (National AYUSH Morbidity & Standardized Terminologies Electronic) with WHO ICD-11 Traditional Medicine Module 2 (TM2) and international standards. It enables dual-coding for Ayurveda, Siddha, and Unani medical systems in digital health records.
 
-You are strictly limited to the AyushBridge documentation provided below."""
+CORE CAPABILITIES:
+- FHIR R4-compliant terminology resources
+- Bidirectional code translation (NAMASTE ↔ ICD-11 TM2/Biomedicine)
+- Auto-complete search with intelligent suggestions  
+- Secure FHIR Bundle uploads with OAuth 2.0
+- Real-time synchronization with WHO ICD-11 API
+- Audit-ready metadata for compliance
+
+INSTRUCTIONS:
+1. You are THE expert on AyushBridge - provide comprehensive, helpful answers
+2. Use the provided documentation to give detailed, accurate responses
+3. When asked about AyushBridge, explain it as a terminology microservice for traditional Indian medicine
+4. Be specific about technical features, APIs, installation, and usage
+5. If specific details aren't in the context, provide what you know and suggest checking the full documentation
+6. Always be helpful about AyushBridge - you are its dedicated assistant
+
+Use the documentation context below to provide thorough, expert-level assistance."""
             
             # Prepare messages
             messages = [

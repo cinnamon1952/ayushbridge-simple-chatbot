@@ -29,7 +29,7 @@ def initialize_chatbot():
     
     try:
         api_key = os.getenv('OPENROUTER_API_KEY')
-        model_name = os.getenv('MODEL_NAME', 'deepseek/deepseek-r1')
+        model_name = os.getenv('MODEL_NAME', 'deepseek/deepseek-chat-v3.1:free')
         
         if not api_key:
             logger.error("OpenRouter API key not configured")
@@ -87,6 +87,11 @@ def chat_endpoint():
             }), 400
         
         temperature = float(data.get('temperature', 0.7))
+        
+        # Debug: test context finding
+        debug_context = chatbot._find_relevant_sections(user_message)
+        logger.info(f"Debug - Context length: {len(debug_context)}")
+        logger.info(f"Debug - First 200 chars: {debug_context[:200]}")
         
         # Get response from chatbot
         response = chatbot.chat(user_message, temperature=temperature)
